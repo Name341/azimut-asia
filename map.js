@@ -6,6 +6,7 @@
   const height = 540;
   const maxZoom = 256;
   const fullView = { x: 0, y: 0, width, height };
+  const maldives = "MDV";
 
   const mapStyle = [
     ".atlas-grid { fill:none; stroke:#89aab4; stroke-opacity:.29; stroke-width:.7; stroke-dasharray:2 5; }",
@@ -21,9 +22,17 @@
     ".atlas-country.atlas-correct { fill:#a4ce9e; stroke:#245838; stroke-width:1.6; }",
     ".atlas-country.atlas-incorrect { fill:#edaaa0; stroke:#a03e32; stroke-width:1.6; }",
     ".atlas-country.atlas-hint { fill:#85be80; stroke:#19533a; stroke-width:2.5; animation:atlas-hint-flash .72s ease-in-out 4; }",
+    ".atlas-island-marker { pointer-events:none; }",
+    ".atlas-island-marker.atlas-active { pointer-events:all; cursor:pointer; }",
+    ".atlas-island-hit { fill:transparent; }",
+    ".atlas-island-ring { fill:#fff2c3; stroke:#48675b; stroke-width:1.5; }",
+    ".atlas-island-marker.atlas-selected .atlas-island-ring { fill:#f2cf67; stroke:#8c7025; }",
+    ".atlas-island-marker.atlas-correct .atlas-island-ring, .atlas-island-marker.atlas-hint .atlas-island-ring { fill:#a4ce9e; stroke:#245838; }",
+    ".atlas-island-marker.atlas-incorrect .atlas-island-ring { fill:#edaaa0; stroke:#a03e32; }",
+    ".atlas-island-marker.atlas-hint .atlas-island-ring { animation:atlas-hint-flash .72s ease-in-out 4; }",
     "@keyframes atlas-hint-flash { 48%,52% { fill:#ffe17a; stroke:#725313; stroke-width:3.5; } }",
     ".atlas-country:focus-visible { outline:none; }",
-    "@media (prefers-reduced-motion:reduce) { .atlas-country { transition:none; } .atlas-country.atlas-hint { animation:none; } }",
+    "@media (prefers-reduced-motion:reduce) { .atlas-country { transition:none; } .atlas-country.atlas-hint,.atlas-island-marker.atlas-hint .atlas-island-ring { animation:none; } }",
   ].join("\n");
 
   function element(name, attributes = {}) {
@@ -123,6 +132,13 @@
       locations.set(id, point);
     }
     for (const d of window.ASIA_MAP_LAKES) water.append(path("atlas-water", d));
+    const islandPoint = locations.get(maldives);
+    const islandMarker = islandPoint && element("g", { class: "atlas-island-marker", "data-map-id": maldives, "aria-hidden": "true" });
+    if (islandMarker) {
+      islandMarker.append(element("circle", { class: "atlas-island-hit", r: 19 }), element("circle", { class: "atlas-island-ring", r: 5.5 }));
+      // The enlarged target must sit behind the other countries' outlines.
+      svg.insertBefore(islandMarker, countryLayer);
+    }
     container.replaceChildren(svg);
 
     let enabled = true;
@@ -157,6 +173,10 @@
       svg.setAttribute("viewBox", `${x} ${y} ${frameWidth} ${frameHeight}`);
       svg.style.touchAction = expanded || view.width < width ? "none" : "pan-y";
       scale = overviewScale * width / view.width;
+      if (islandMarker) {
+        islandMarker.style.display = scale >= 72 ? "none" : "";
+        islandMarker.setAttribute("transform", `translate(${islandPoint.x} ${islandPoint.y}) scale(${1 / scale})`);
+      }
     }
 
     function measureViewport() {
@@ -171,12 +191,17 @@
       measureViewport();
     }
 
+    function reflectSelection(node, id) {
+      node.classList.toggle("atlas-active", enabled);
+      node.classList.toggle("atlas-selected", !result && id === selection);
+      node.classList.toggle("atlas-correct", result?.correct === id);
+      node.classList.toggle("atlas-incorrect", result?.selected === id && result?.correct !== id);
+    }
+
     function refreshTargets() {
+      if (islandMarker) reflectSelection(islandMarker, maldives);
       for (const [id, node] of countries) {
-        node.classList.toggle("atlas-active", enabled);
-        node.classList.toggle("atlas-selected", !result && id === selection);
-        node.classList.toggle("atlas-correct", result?.correct === id);
-        node.classList.toggle("atlas-incorrect", result?.selected === id && result?.correct !== id);
+        reflectSelection(node, id);
         if (enabled) {
           node.setAttribute("role", "button");
           node.setAttribute("tabindex", id === keyboardId ? 0 : -1);
@@ -239,11 +264,13 @@
     function clearHint() {
       stopHintCamera();
       hintedCountry?.classList.remove("atlas-hint");
+      islandMarker?.classList.remove("atlas-hint");
       hintedCountry = null;
     }
 
     function highlightHint() {
       hintedCountry?.classList.add("atlas-hint");
+      if (hintedCountry?.getAttribute("data-map-id") === maldives) islandMarker?.classList.add("atlas-hint");
     }
 
     function finishHint() {
@@ -283,23 +310,37 @@
       hintFrame = window.requestAnimationFrame(tick);
     }
 
-    function revealCountry(id) {
-      const country = countries.get(id);
-      if (!country) return;
-      clearHint();
-      hintedCountry = country;
-
-      const bounds = country.getBBox();
+    function fitCountry(bounds, minWidth = width / 160) {
       const centerX = bounds.x + bounds.width / 2;
       const centerY = bounds.y + bounds.height / 2;
-      const targetWidth = Math.min(width, Math.max(width / 160, bounds.width * 1.35, bounds.height * 1.35 * width / height));
+      const targetWidth = Math.min(width, Math.max(minWidth, bounds.width * 1.35, bounds.height * 1.35 * width / height));
       const targetHeight = targetWidth * height / width;
-      const destination = {
+      return {
         x: Math.max(0, Math.min(width - targetWidth, centerX - targetWidth / 2)),
         y: Math.max(0, Math.min(height - targetHeight, centerY - targetHeight / 2)),
         width: targetWidth,
         height: targetHeight,
       };
+    }
+
+    function showCountry(id) {
+      const country = countries.get(id);
+      if (!country) return;
+      clearHint();
+      setSelection(id);
+      view = fitCountry(country.getBBox(), width / 9);
+      updateView();
+    }
+
+    function revealCountry(id) {
+      const country = countries.get(id);
+      if (!country) return;
+      clearHint();
+      hintedCountry = country;
+      const bounds = country.getBBox();
+      const destination = fitCountry(bounds);
+      const centerX = bounds.x + bounds.width / 2;
+      const centerY = bounds.y + bounds.height / 2;
 
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         view = destination;
@@ -512,7 +553,7 @@
     resize.observe(svg);
 
     return {
-      setEnabled, setSelection, setResult, focus, revealCountry, clearHint, setExpandedView,
+      setEnabled, setSelection, setResult, focus, showCountry, revealCountry, clearHint, setExpandedView,
       resetView() {
         finishHint();
         view = { ...fullView };

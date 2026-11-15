@@ -4,15 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f6ef">
-  <meta name="description" content="Выучите страны и столицы Азии на интерактивной карте. Адаптивный тренажёр и контрольная по всем странам.">
+  <meta name="description" content="Изучайте страны и столицы Азии на интерактивной карте. Поиск стран, адаптивный тренажёр и контрольная.">
   <title>Азимут — Страны и столицы Азии</title>
   <link rel="icon" href="compass.svg" type="image/svg+xml">
   <link rel="stylesheet" href="fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css?v=mobile-map-2">
-  <script src="quiz.js?v=caucasus-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=theory-1">
+  <script src="quiz.js?v=theory-1" defer></script>
   <script src="map-data.js?v=caucasus-1" defer></script>
-  <script src="map.js?v=mobile-map-2" defer></script>
+  <script src="map.js?v=theory-1" defer></script>
   <script src="app.js?v=mobile-map-2" defer></script>
+  <script src="theory.js?v=theory-1" defer></script>
 </head>
 <body>
   <svg class="symbol-bank" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -33,8 +34,12 @@
 
   <header class="site-header">
     <div class="site-header-inner">
-      <div class="brand"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg></span><span>Азимут<span class="brand-period">.</span></span></div>
-      <button class="header-button" id="open-progress" type="button"><svg class="icon" aria-hidden="true"><use href="#i-bars"/></svg><span>Мой прогресс</span></button>
+      <div class="brand"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg></span><span class="brand-name">Азимут<span class="brand-period">.</span></span></div>
+      <nav class="site-nav" aria-label="Разделы тренажёра">
+        <button type="button" id="show-practice" aria-controls="practice-view" aria-pressed="true">Задания</button>
+        <button type="button" id="show-theory" aria-controls="theory-view" aria-pressed="false">Теория</button>
+      </nav>
+      <button class="header-button" id="open-progress" type="button" aria-label="Мой прогресс"><svg class="icon" aria-hidden="true"><use href="#i-bars"/></svg><span>Мой прогресс</span></button>
     </div>
   </header>
 
@@ -50,6 +55,7 @@
       </div>
     </section>
 
+    <div id="practice-view">
     <section class="toolbar" aria-label="Настройки задания">
       <fieldset class="setting">
         <legend>Вид работы</legend>
@@ -125,6 +131,41 @@
       <div class="review-heading"><h3>Разбор ответов</h3><label class="filter"><input type="checkbox" id="errors-only"> Только ошибки</label></div>
       <table class="review-table" role="table"><thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Страна</th><th scope="col" role="columnheader">Столица</th><th scope="col" role="columnheader">Ваш ответ</th><th scope="col" role="columnheader">Выбор на карте</th></tr></thead><tbody id="result-rows" role="rowgroup"></tbody></table>
       <p class="empty-state" id="empty-results" hidden>Все ответы верны.</p>
+    </section>
+    </div>
+
+    <section class="theory-layout" id="theory-view" aria-labelledby="theory-title" hidden>
+      <div class="theory-panel">
+        <h2 id="theory-title">Найти страну</h2>
+        <form id="theory-search" class="theory-search" role="search" novalidate>
+          <label for="theory-query">Название страны</label>
+          <div class="theory-search-row">
+            <input id="theory-query" type="search" placeholder="Например, Мальдивы" autocomplete="off" spellcheck="false" enterkeyhint="search" maxlength="100">
+            <button type="submit" class="primary-button">Найти</button>
+          </div>
+        </form>
+        <p id="theory-status" class="theory-status" role="status" hidden></p>
+        <ul class="theory-matches" id="theory-matches" hidden></ul>
+        <div id="theory-result" class="theory-result" aria-live="polite" hidden>
+          <h3 id="theory-country"></h3>
+          <dl><dt>Столица</dt><dd id="theory-capital"></dd></dl>
+          <p id="theory-note" class="theory-note" hidden></p>
+        </div>
+      </div>
+      <section class="map-panel" aria-labelledby="theory-map-title">
+        <header class="map-header">
+          <div class="map-heading"><h2 id="theory-map-title"><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg>Карта Азии</h2></div>
+          <div class="map-controls" aria-label="Управление картой">
+            <div class="zoom-control">
+              <button type="button" id="theory-zoom-in" aria-label="Приблизить карту" title="Приблизить"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              <button type="button" id="theory-zoom-out" aria-label="Отдалить карту" title="Отдалить"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+            </div>
+            <button type="button" class="reset-map" id="theory-reset-map" aria-label="Показать всю карту" title="Показать всю карту"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg></button>
+          </div>
+        </header>
+        <div class="map-frame"><div id="theory-map" class="map-surface"></div></div>
+        <div class="map-footer"><span>Выберите страну на карте, чтобы узнать её столицу</span><a class="map-credit" href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer">Natural Earth</a></div>
+      </section>
     </section>
 
     <footer class="site-footer"><span>Азимут · География Азии</span><details><summary>О наборе стран</summary><p>В набор входят 48 стран азиатского региона ООН M49, а также Абхазия и Южная Осетия, независимость которых признала Россия. <a href="https://unstats.un.org/unsd/methodology/m49/overview/" target="_blank" rel="noopener noreferrer">Классификация ООН M49</a> · <a href="https://cdn.osce.org/sites/default/files/f/documents/9/8/33201.pdf" target="_blank" rel="noopener noreferrer">Заявление России в ОБСЕ</a></p></details></footer>

@@ -144,6 +144,19 @@
       .replace(/[^\p{L}\p{N}]/gu, "");
   }
 
+  function searchCountries(value) {
+    const term = normalize(value);
+    if (!term) return { exact: null, matches: [] };
+    const matches = [];
+    let exact = null;
+    for (const country of countries) {
+      const names = [country.name, ...country.countryAliases].map(normalize);
+      if (names.includes(term)) exact = country;
+      else if (names.some(name => name.includes(term))) matches.push(country);
+    }
+    return { exact, matches: exact ? [exact, ...matches] : matches };
+  }
+
   function readProgress() {
     if (volatileProgress) return volatileProgress;
 
@@ -324,5 +337,5 @@
     return Object.freeze({ current: () => question, check, submit, next, stats });
   }
 
-  window.AsiaQuiz = Object.freeze({ countries, createSession, mastery });
+  window.AsiaQuiz = Object.freeze({ countries, createSession, mastery, searchCountries });
 })();
