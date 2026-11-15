@@ -19,8 +19,14 @@
     });
   }
 
-  // Countries in UN M49 region 142 (Asia). The two Chinese special administrative regions have no separate questions.
+  // UN M49 Asia countries, supplemented by Abkhazia and South Ossetia, which Russia recognizes.
   const countries = Object.freeze([
+    entry("B35", "Абхазия", "Сухум", {
+      countryAliases: ["Республика Абхазия", "Апсны"],
+      capitalAliases: ["Сухуми", "Акуа", "Аҟуа"],
+      note: "Россия признала независимость Абхазии в 2008 году.",
+      noteUrl: "https://www.kdmid.ru/docs/abkhazia/information-about-the-country",
+    }),
     entry("AZE", "Азербайджан", "Баку", { countryAliases: ["Азербайджанская Республика"] }),
     entry("ARM", "Армения", "Ереван", { countryAliases: ["Республика Армения"] }),
     entry("AFG", "Афганистан", "Кабул"),
@@ -118,6 +124,12 @@
       noteUrl: "https://www.emb-havana.gov.lk/en/sri-lanka-profile",
     }),
     entry("KOR", "Южная Корея", "Сеул", { countryAliases: ["Республика Корея"] }),
+    entry("B37", "Южная Осетия", "Цхинвал", {
+      countryAliases: ["Республика Южная Осетия", "Государство Алания", "РЮО"],
+      capitalAliases: ["Цхинвали"],
+      note: "Россия признала независимость Южной Осетии в 2008 году.",
+      noteUrl: "https://www.kdmid.ru/docs/south-ossetia/information-about-the-country/",
+    }),
     entry("JPN", "Япония", "Токио"),
   ]);
 
