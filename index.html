@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f6ef">
+  <meta name="description" content="Выучите страны и столицы Азии на интерактивной карте. Адаптивный тренажёр и контрольная по всем странам.">
+  <title>Азимут — Страны и столицы Азии</title>
+  <link rel="icon" href="compass.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="quiz.js" defer></script>
+  <script src="map-data.js" defer></script>
+  <script src="map.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg class="symbol-bank" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.7 8.3-1.9 5.5-5.5 1.9 1.9-5.5 5.5-1.9Z"/></symbol>
+    <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 19h16M7 15v4m5-9v9m5-14v14"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 8a7 7 0 0 1 12-1l2 5M4 12l2 5a7 7 0 0 0 12-1"/></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6m-6 4h4"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L19 7"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 10-7 10S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+  </svg>
+
+  <header class="site-header">
+    <div class="site-header-inner">
+      <div class="brand"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg></span><span>Азимут<span class="brand-period">.</span></span></div>
+      <button class="header-button" id="open-progress" type="button"><svg class="icon" aria-hidden="true"><use href="#i-bars"/></svg><span>Мой прогресс</span></button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="intro" aria-labelledby="page-title">
+      <div class="intro-copy">
+        <p class="eyebrow"><span></span> Географический тренажёр</p>
+        <h1 id="page-title">Страны и столицы <em>Азии</em></h1>
+        <p class="intro-description">Тренируйте память и ориентируйтесь на карте Азии.</p>
+      </div>
+      <div class="intro-compass" aria-hidden="true">
+        <svg viewBox="0 0 128 128" fill="none"><circle cx="64" cy="64" r="47"/><circle cx="64" cy="64" r="37" stroke-dasharray="1 4"/><path d="M64 7v114M7 64h114M33 33l62 62m-62 0 62-62"/><path class="rose-light" d="m64 20 9 35 35 9-35 9-9 35-9-35-35-9 35-9 9-35Z"/><path class="rose-dark" d="M64 20v44l9-9-9-35ZM108 64H64l9 9 35-9ZM64 108V64l-9 9 9 35ZM20 64h44l-9-9-35 9Z"/><circle cx="64" cy="64" r="3" class="rose-center"/></svg>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Настройки задания">
+      <fieldset class="setting">
+        <legend>Вид работы</legend>
+        <div class="segments">
+          <label class="segment"><input type="radio" name="mode" value="training" checked><span><svg class="icon" aria-hidden="true"><use href="#i-repeat"/></svg>Тренажёр</span></label>
+          <label class="segment"><input type="radio" name="mode" value="test"><span><svg class="icon" aria-hidden="true"><use href="#i-clipboard"/></svg>Контрольная</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="setting">
+        <legend>Тип задания</legend>
+        <div class="segments">
+          <label class="segment"><input type="radio" name="direction" value="country-to-capital" aria-label="Из страны в столицу" checked><span>Страна <svg class="icon direction-arrow" aria-hidden="true"><use href="#i-arrow"/></svg> Столица</span></label>
+          <label class="segment"><input type="radio" name="direction" value="capital-to-country" aria-label="Из столицы в страну"><span>Столица <svg class="icon direction-arrow" aria-hidden="true"><use href="#i-arrow"/></svg> Страна</span></label>
+        </div>
+      </fieldset>
+    </section>
+
+    <div class="workspace" id="workspace">
+      <section class="map-panel" aria-labelledby="map-title">
+        <header class="map-header">
+          <h2 id="map-title"><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg>Карта Азии</h2>
+          <span id="map-count" class="map-count"></span>
+        </header>
+        <div class="map-frame">
+          <div id="map-surface" class="map-surface"></div>
+          <div class="map-controls" aria-label="Управление картой">
+            <div class="zoom-control">
+              <button type="button" id="zoom-in" aria-label="Приблизить карту" title="Приблизить"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              <button type="button" id="zoom-out" aria-label="Отдалить карту" title="Отдалить"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+            </div>
+            <button type="button" id="reset-map" class="reset-map" aria-label="Показать всю карту" title="Показать всю карту"><svg class="icon" aria-hidden="true"><use href="#i-target"/></svg></button>
+          </div>
+        </div>
+        <div class="map-footer"><span>Приблизьте карту, чтобы выбрать небольшую страну</span><button type="button" id="return-to-task" class="return-to-task" hidden>К заданию</button><a class="map-credit" href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer">Natural Earth</a></div>
+      </section>
+
+      <aside class="task-column" aria-label="Задание">
+        <section class="task-panel" aria-labelledby="prompt">
+          <div class="task-content">
+            <div class="question-meta"><span id="question-number">Задание 1</span><span id="mode-chip" class="mode-chip">Тренажёр</span></div>
+            <progress id="test-progress" aria-label="Прогресс контрольной" hidden></progress>
+            <p class="prompt-label" id="prompt-label">Названа страна</p>
+            <h2 class="prompt" id="prompt" tabindex="-1" aria-live="polite">Загрузка…</h2>
+            <form id="answer-form" novalidate>
+              <div class="steps">
+                <div class="step"><span class="step-number" aria-hidden="true">1</span><div class="step-body"><label id="text-label" for="answer">Введите название столицы</label><input type="text" id="answer" placeholder="Название столицы" autocomplete="off" autocapitalize="sentences" spellcheck="false" maxlength="100" aria-describedby="text-attempt"><p id="text-attempt" class="attempt-status" role="status" hidden></p></div></div>
+                <div class="step"><span class="step-number" aria-hidden="true">2</span><div class="step-body"><span class="step-label" id="map-label">Покажите страну на карте</span><button type="button" class="selection-status" id="selection-status" aria-controls="map-surface" aria-describedby="map-attempt"><svg class="icon" aria-hidden="true"><use id="selection-icon" href="#i-pin"/></svg><span id="selection-text" aria-live="polite">Выберите страну на карте</span></button><p id="map-attempt" class="attempt-status" role="status" hidden></p></div></div>
+              </div>
+              <p id="validation" class="validation" role="alert" hidden></p>
+              <div id="feedback" class="feedback" role="status" hidden></div>
+              <div class="answer-actions">
+                <button id="check-answer" type="submit" class="primary-button"><span id="check-label">Проверить ответ</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+                <button id="skip-answer" type="button" class="skip-button">Пропустить</button>
+              </div>
+            </form>
+          </div>
+        </section>
+        <div class="mode-note" id="mode-note"><svg class="icon" aria-hidden="true"><use id="mode-note-icon" href="#i-repeat"/></svg><p><strong id="mode-note-title">Адаптивное повторение</strong><span id="mode-note-text">Страны, в которых вы ошибаетесь, будут попадаться чаще.</span></p></div>
+      </aside>
+    </div>
+
+    <section class="results-panel" id="results" aria-labelledby="results-title" hidden>
+      <div class="results-heading"><div><p class="eyebrow"><span></span> Контрольная завершена</p><h2 id="results-title" tabindex="-1">Результаты контрольной</h2><p id="results-direction"></p></div><button type="button" class="primary-button" id="restart-test">Пройти ещё раз <svg class="icon" aria-hidden="true"><use href="#i-repeat"/></svg></button></div>
+      <div class="result-metrics" id="result-metrics"></div>
+      <div class="review-heading"><h3>Разбор ответов</h3><label class="filter"><input type="checkbox" id="errors-only"> Только ошибки</label></div>
+      <div class="table-scroll"><table><thead><tr><th scope="col">Страна</th><th scope="col">Столица</th><th scope="col">Ваш ответ</th><th scope="col">Выбор на карте</th></tr></thead><tbody id="result-rows"></tbody></table></div>
+      <p class="empty-state" id="empty-results" hidden>Все ответы верны.</p>
+    </section>
+
+    <footer class="site-footer"><span>Азимут · География Азии</span><details><summary>О наборе стран</summary><p>В набор входят 48 государств из региона «Азия». Гонконг и Макао — специальные административные районы Китая. Тайвань учтён в составе Китая согласно M49. <a href="https://unstats.un.org/unsd/methodology/m49/overview/" target="_blank" rel="noopener noreferrer">Классификация ООН M49</a></p></details></footer>
+  </main>
+
+  <dialog id="progress-dialog" aria-labelledby="progress-title">
+    <div class="dialog-heading"><h2 id="progress-title">Мой прогресс</h2><form method="dialog"><button type="submit" aria-label="Закрыть" class="close-dialog"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></form></div>
+    <p class="dialog-intro">Здесь учитываются ответы в тренажёре. Прогресс сохраняется в этом браузере.</p>
+    <div id="progress-summary"></div>
+    <p class="progress-note">Страна считается выученной после двух заданий подряд, где обе части верны с первой попытки.</p>
+  </dialog>
+  <noscript><p class="noscript">Включите JavaScript, чтобы работать с картой и отвечать на задания.</p></noscript>
+</body>
+</html>
