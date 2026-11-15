@@ -15,7 +15,8 @@
     ".atlas-context,.atlas-country { fill:#d4e4bb; }",
     ".atlas-country { stroke:#fffdf2; stroke-width:1; transition:fill .14s, stroke .14s; }",
     ".atlas-country.atlas-active { cursor:pointer; }",
-    ".atlas-country:where(.atlas-active:hover,.atlas-active:focus-visible) { fill:#bbd1a7; stroke:#48675b; stroke-width:1.15; }",
+    ".atlas-country:where(.atlas-active:focus-visible) { fill:#bbd1a7; stroke:#48675b; stroke-width:1.15; }",
+    "@media (hover:hover) { .atlas-country:where(.atlas-active:hover) { fill:#bbd1a7; stroke:#48675b; stroke-width:1.15; } }",
     ".atlas-country.atlas-selected { fill:#f2cf67; stroke:#8c7025; stroke-width:1.35; }",
     ".atlas-country.atlas-correct { fill:#a4ce9e; stroke:#245838; stroke-width:1.6; }",
     ".atlas-country.atlas-incorrect { fill:#edaaa0; stroke:#a03e32; stroke-width:1.6; }",
@@ -131,22 +132,43 @@
     let view = { ...fullView };
     let overviewScale = 1;
     let scale = 1;
+    let expanded = false;
+    let viewportAspect = width / height;
     let drag = null;
     let touchGesture = null;
     let ignorePointerClick = false;
     let hintedCountry = null;
     let hintFrame = null;
 
+    function frame() {
+      if (!expanded) return view;
+      const frameWidth = Math.max(view.width, view.height * viewportAspect);
+      const frameHeight = Math.max(view.height, view.width / viewportAspect);
+      return {
+        x: view.x + (view.width - frameWidth) / 2,
+        y: view.y + (view.height - frameHeight) / 2,
+        width: frameWidth,
+        height: frameHeight,
+      };
+    }
+
     function updateView() {
-      svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`);
-      svg.style.touchAction = view.width < width ? "none" : "pan-y";
+      const { x, y, width: frameWidth, height: frameHeight } = frame();
+      svg.setAttribute("viewBox", `${x} ${y} ${frameWidth} ${frameHeight}`);
+      svg.style.touchAction = expanded || view.width < width ? "none" : "pan-y";
       scale = overviewScale * width / view.width;
     }
 
     function measureViewport() {
       const rect = svg.getBoundingClientRect();
       overviewScale = Math.min(rect.width / width, rect.height / height) || 1;
-      scale = overviewScale * width / view.width;
+      viewportAspect = rect.height > 0 && rect.width > 0 ? rect.width / rect.height : width / height;
+      updateView();
+    }
+
+    function setExpandedView(value) {
+      expanded = value;
+      measureViewport();
     }
 
     function refreshTargets() {
@@ -286,8 +308,9 @@
         return;
       }
 
-      const centerOutsideView = centerX < view.x || centerX > view.x + view.width ||
-        centerY < view.y || centerY > view.y + view.height;
+      const visible = frame();
+      const centerOutsideView = centerX < visible.x || centerX > visible.x + visible.width ||
+        centerY < visible.y || centerY > visible.y + visible.height;
       const approachCountry = () => animateView(destination, 720, highlightHint);
       if (view.width < width && centerOutsideView) {
         animateView(fullView, 460, approachCountry);
@@ -308,8 +331,9 @@
       if (!point) return;
       keyboardId = id;
       const padding = 12 / scale;
-      if (point.x < view.x + padding || point.x > view.x + view.width - padding ||
-          point.y < view.y + padding || point.y > view.y + view.height - padding) {
+      const visible = frame();
+      if (point.x < visible.x + padding || point.x > visible.x + visible.width - padding ||
+          point.y < visible.y + padding || point.y > visible.y + visible.height - padding) {
         panTo(point.x - view.width / 2, point.y - view.height / 2);
       }
       refreshTargets();
@@ -484,12 +508,11 @@
 
     refreshTargets();
     measureViewport();
-    updateView();
     const resize = new ResizeObserver(measureViewport);
     resize.observe(svg);
 
     return {
-      setEnabled, setSelection, setResult, focus, revealCountry, clearHint,
+      setEnabled, setSelection, setResult, focus, revealCountry, clearHint, setExpandedView,
       resetView() {
         finishHint();
         view = { ...fullView };

@@ -5,6 +5,7 @@
   const { AsiaQuiz, AsiaMap } = window;
   const ui = Object.fromEntries([
     "workspace", "map-count", "map-surface", "map-label", "task-actions",
+    "map-slot", "map-panel", "map-dialog", "map-host", "expand-map", "close-map", "finish-map", "mobile-map-prompt", "mobile-map-status",
     "question-number", "mode-chip", "test-progress", "prompt-label", "prompt", "answer-form",
     "text-label", "answer", "text-attempt", "map-attempt", "selection-status", "selection-icon", "selection-text",
     "validation", "feedback", "check-answer", "check-label", "skip-answer", "mode-note-icon",
@@ -22,6 +23,7 @@
   const CAPITAL = "country-to-capital";
   const COUNTRY = "capital-to-country";
   const ATTEMPT_LIMIT = 3;
+  const mobileMap = window.matchMedia("(max-width: 740px), (max-width: 960px) and (pointer: coarse)");
   const directions = {
     [CAPITAL]: {
       title: "Страна → Столица",
@@ -43,6 +45,7 @@
   let mode = "training";
   let direction = CAPITAL;
   let active;
+  let mapOpener;
 
   const map = AsiaMap.mount(ui["map-surface"], [...countryById.keys()], (id) => {
     active.mapId = id;
@@ -80,6 +83,40 @@
     if (top < 8 || bottom > visibleBottom - 8) element.scrollIntoView({ block, behavior: "instant" });
   }
 
+  function openMobileMap(opener) {
+    const dialog = ui["map-dialog"];
+    if (!mobileMap.matches || typeof dialog.showModal !== "function") return false;
+    if (dialog.open) return true;
+
+    mapOpener = opener;
+    ui["map-slot"].style.minHeight = `${ui["map-panel"].offsetHeight}px`;
+    ui["mobile-map-prompt"].textContent = active.session.current().prompt;
+    ui["map-host"].append(ui["map-panel"]);
+    dialog.showModal();
+    map.setExpandedView(true);
+    renderSelection();
+    return true;
+  }
+
+  function closeMobileMap() {
+    ui["map-dialog"].close();
+  }
+
+  function restoreInlineMap() {
+    ui["map-slot"].append(ui["map-panel"]);
+    ui["map-slot"].style.minHeight = "";
+    map.setExpandedView(false);
+    mapOpener?.focus({ preventScroll: true });
+    mapOpener = null;
+  }
+
+  function syncMapButton() {
+    const available = mobileMap.matches && typeof ui["map-dialog"].showModal === "function";
+    ui["expand-map"].hidden = !available;
+    if (available) ui["selection-status"].setAttribute("aria-haspopup", "dialog");
+    else ui["selection-status"].removeAttribute("aria-haspopup");
+  }
+
   function renderSelection() {
     const selected = active.mapId !== null;
     const hinted = active.practice?.map.status === "hint";
@@ -88,6 +125,11 @@
     ui["selection-text"].textContent = hinted
       ? "Смотреть подсказку на карте"
       : (selected ? "Страна выбрана" : "Выберите страну на карте");
+    if (ui["map-dialog"].open) {
+      ui["mobile-map-status"].textContent = hinted
+        ? "Нужная страна выделена"
+        : (selected ? "Страна выбрана" : "Коснитесь страны на карте");
+    }
   }
 
   function renderAttempt(node, attempt, correctText, hintText) {
@@ -133,7 +175,7 @@
     map.setEnabled(!mapStatus);
     if (animateHint) {
       map.setSelection(null);
-      ui["map-surface"].scrollIntoView({ block: "center", behavior: "instant" });
+      if (!openMobileMap(ui["check-answer"])) ui["map-surface"].scrollIntoView({ block: "center", behavior: "instant" });
       map.revealCountry(question.country.id);
     } else if (mapStatus) {
       const correct = question.country.id;
@@ -270,7 +312,7 @@
     if (text.status && map.status) finishPractice();
     const animateHint = mapChanged && map.status === "hint";
     renderQuestion({ updateMap: mapChanged && Boolean(map.status), animateHint });
-    if (active.result) ui["check-answer"].focus({ preventScroll: true });
+    if (active.result && !ui["map-dialog"].open) ui["check-answer"].focus({ preventScroll: true });
     if (!animateHint) {
       if (textChanged && !active.result && (!mapChanged || map.status === "correct")) {
         revealOnPhone(ui["text-attempt"]);
@@ -297,6 +339,7 @@
       ui.validation.textContent = `${prompt}.`;
       ui.validation.hidden = false;
       if (textMissing) ui.answer.setAttribute("aria-invalid", "true");
+      if (mapMissing && !textMissing && openMobileMap(ui["check-answer"])) return;
       (textMissing ? ui.answer : ui["selection-status"]).focus();
       return;
     }
@@ -390,9 +433,16 @@
   });
   ui["skip-answer"].addEventListener("click", () => submitAnswer(true));
   ui["selection-status"].addEventListener("click", () => {
+    if (openMobileMap(ui["selection-status"])) return;
     ui["map-surface"].scrollIntoView({ block: "center", behavior: "instant" });
     ui["map-surface"].querySelector('[tabindex="0"]')?.focus({ preventScroll: true });
   });
+  ui["expand-map"].addEventListener("click", () => openMobileMap(ui["expand-map"]));
+  ui["map-dialog"].addEventListener("close", restoreInlineMap);
+  ui["close-map"].addEventListener("click", closeMobileMap);
+  ui["finish-map"].addEventListener("click", closeMobileMap);
+  mobileMap.addEventListener?.("change", syncMapButton);
+  syncMapButton();
   byId("zoom-in").addEventListener("click", map.zoomIn);
   byId("zoom-out").addEventListener("click", map.zoomOut);
   byId("reset-map").addEventListener("click", map.resetView);

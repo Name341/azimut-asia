@@ -65,7 +65,8 @@ h1 em { color: #527459; }
 
 .workspace { display: grid; grid-template: 'map task' auto 'map actions' auto 'map note' 1fr / minmax(0, 2.23fr) minmax(320px, 1fr); align-items: start; column-gap: 19px; }
 .map-panel, .task-panel, .results-panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
-.map-panel { grid-area: map; position: relative; overflow: hidden; }
+.map-slot { grid-area: map; min-width: 0; }
+.map-panel { position: relative; overflow: hidden; }
 .map-header, .map-heading, .map-footer { display: flex; align-items: center; gap: 8px; }
 .map-header { justify-content: space-between; padding: 13px 16px; }
 .map-heading { flex: 1; justify-content: space-between; }
@@ -76,8 +77,9 @@ h1 em { color: #527459; }
 .map-surface { height: clamp(365px, 37.1vw, 533px); isolation: isolate; }
 .map-surface > svg { display: block; width: 100%; height: 100%; }
 .map-controls { position: absolute; z-index: 1; right: 14px; bottom: 57px; display: grid; gap: 6px; }
-.zoom-control, .reset-map { border-radius: 9px; border: 1px solid #d0ded7; background: #fffffb; box-shadow: 0 2px 5px #2b524018; overflow: hidden; }
+.zoom-control, .reset-map, .expand-map { border-radius: 9px; border: 1px solid #d0ded7; background: #fffffb; box-shadow: 0 2px 5px #2b524018; overflow: hidden; }
 .map-controls button { width: 36px; height: 36px; display: grid; place-items: center; }
+.map-controls .expand-map { display: none; }
 .zoom-control button { background: transparent; border: none; }
 .zoom-control button + button { border-top: 1px solid #e1e6df; }
 .map-controls button:hover { background: #edf2e8; }
@@ -169,6 +171,27 @@ dialog::backdrop { background: #19352c60; }
 .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .dialog-heading h2 { font-size: 32px; letter-spacing: -.04em; }
 .close-dialog { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 8px; background: #f3f4ed; }
+.map-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; position: fixed; inset: 0; width: 100%; height: 100vh; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; overflow: hidden; overscroll-behavior: contain; background: var(--paper); }
+html:has(.map-dialog[open]) { overflow: hidden; }
+.mobile-map-heading, .mobile-map-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)); }
+.mobile-map-heading { padding-block: max(8px, env(safe-area-inset-top)) 8px; border-bottom: 1px solid var(--line); }
+.mobile-map-heading h2 { color: var(--muted); font-size: 12px; font-weight: 600; }
+#mobile-map-prompt { font-size: clamp(17px, 4.7vw, 23px); font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.mobile-map-heading .close-dialog { width: 44px; height: 44px; flex: 0 0 44px; }
+.map-host { display: flex; flex-direction: column; min-height: 0; }
+.map-dialog .map-panel { display: grid; grid-template-rows: minmax(0, 1fr) auto auto; flex: 1; min-height: 0; border: 0; border-radius: 0; }
+.map-dialog .map-heading, .map-dialog .map-controls .expand-map { display: none; }
+.map-dialog .map-frame { grid-row: 1; border-top: 0; }
+.map-dialog .map-header { grid-row: 2; justify-content: center; padding: 4px 8px; }
+.map-dialog .map-controls { position: static; display: flex; }
+.map-dialog .zoom-control { display: flex; }
+.map-dialog .zoom-control button + button { border-top: 0; border-left: 1px solid #e1e6df; }
+.map-dialog .map-controls button { width: 44px; height: 44px; }
+.map-dialog .map-surface { height: 100%; aspect-ratio: auto; }
+.map-dialog .map-footer { min-height: 30px; padding: 4px 9px; }
+.mobile-map-actions { min-height: 56px; padding-block: 6px max(7px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+.mobile-map-actions p { color: var(--muted); font-size: 12px; }
+.mobile-map-actions .primary-button { flex: 0 0 auto; }
 .dialog-intro { margin: 7px 0 14px; font-size: 13px; }
 .mastery + .mastery { margin-top: 11px; }
 .mastery { border-radius: 10px; background: #eef3e8; padding: 12px; }
@@ -251,8 +274,12 @@ dialog::backdrop { background: #19352c60; }
   .site-footer { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 }
 
-@media (max-width: 365px) {
+@media (max-width: 410px) {
   .map-count { display: none; }
+}
+
+@media (max-width: 740px), (max-width: 960px) and (pointer: coarse) {
+  .map-controls .expand-map { display: grid; }
 }
 
 @media (pointer: coarse) {
