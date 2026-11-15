@@ -129,8 +129,10 @@
     let result = null;
     let keyboardId = [...locations.keys()].sort((a, b) => locations.get(a).x - locations.get(b).x)[0];
     let view = { ...fullView };
+    let overviewScale = 1;
     let scale = 1;
     let drag = null;
+    let touchGesture = null;
     let ignorePointerClick = false;
     let hintedCountry = null;
     let hintFrame = null;
@@ -138,8 +140,13 @@
     function updateView() {
       svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`);
       svg.style.touchAction = view.width < width ? "none" : "pan-y";
+      scale = overviewScale * width / view.width;
+    }
+
+    function measureViewport() {
       const rect = svg.getBoundingClientRect();
-      scale = Math.min(rect.width / view.width, rect.height / view.height) || 1;
+      overviewScale = Math.min(rect.width / width, rect.height / height) || 1;
+      scale = overviewScale * width / view.width;
     }
 
     function refreshTargets() {
@@ -186,12 +193,18 @@
 
     function zoomBy(factor, anchor = { x: view.x + view.width / 2, y: view.y + view.height / 2 }) {
       finishHint();
-      const newWidth = Math.max(width / maxZoom, Math.min(width, view.width / factor));
-      const newHeight = newWidth * height / width;
-      const x = anchor.x - (anchor.x - view.x) * newWidth / view.width;
-      const y = anchor.y - (anchor.y - view.y) * newHeight / view.height;
+      const newWidth = limitWidth(view.width / factor);
+      const ratio = newWidth / view.width;
+      zoomTo(newWidth, anchor.x - (anchor.x - view.x) * ratio, anchor.y - (anchor.y - view.y) * ratio);
+    }
+
+    function limitWidth(nextWidth) {
+      return Math.max(width / maxZoom, Math.min(width, nextWidth));
+    }
+
+    function zoomTo(newWidth, x, y) {
       view.width = newWidth;
-      view.height = newHeight;
+      view.height = newWidth * height / width;
       panTo(x, y);
     }
 
@@ -355,6 +368,7 @@
     }, { passive: false });
 
     svg.addEventListener("pointerdown", event => {
+      if (event.pointerType === "touch") return;
       ignorePointerClick = false;
       if (view.width === width || event.button !== 0 || !event.isPrimary) return;
       drag = {
@@ -388,9 +402,90 @@
     svg.addEventListener("pointercancel", finishDrag);
     svg.addEventListener("lostpointercapture", finishDrag);
 
+    function mapTouches(event) {
+      return Array.from(event.touches).filter(touch => svg.contains(touch.target));
+    }
+
+    function fingerPair(first, second) {
+      return {
+        x: (first.clientX + second.clientX) / 2,
+        y: (first.clientY + second.clientY) / 2,
+        distance: Math.max(1, Math.hypot(first.clientX - second.clientX, first.clientY - second.clientY)),
+      };
+    }
+
+    function startTouchGesture([first, second]) {
+      if (!first) {
+        touchGesture = null;
+      } else if (!second) {
+        touchGesture = { x: first.clientX, y: first.clientY, moved: false, canPan: view.width < width };
+      } else {
+        finishHint();
+        const midpoint = fingerPair(first, second);
+        touchGesture = {
+          ...midpoint,
+          ids: [first.identifier, second.identifier],
+          anchor: pointFromClient(midpoint.x, midpoint.y),
+          view: { ...view },
+          scale,
+        };
+      }
+    }
+
+    svg.addEventListener("touchstart", event => {
+      const touches = mapTouches(event);
+      if (!touchGesture) ignorePointerClick = false;
+      if (touches.length >= 2) {
+        ignorePointerClick = true;
+        if (!event.cancelable && view.width === width) return;
+        if (event.cancelable) event.preventDefault();
+      }
+      startTouchGesture(touches);
+    }, { passive: false });
+
+    svg.addEventListener("touchmove", event => {
+      if (!touchGesture) return;
+      const touches = mapTouches(event);
+      const gesture = touchGesture;
+      if (gesture.ids) {
+        const [first, second] = gesture.ids.map(id => touches.find(touch => touch.identifier === id));
+        if (!first || !second || (!event.cancelable && view.width === width)) return;
+        if (event.cancelable) event.preventDefault();
+        const midpoint = fingerPair(first, second);
+        const nextWidth = limitWidth(gesture.view.width * gesture.distance / midpoint.distance);
+        const ratio = nextWidth / gesture.view.width;
+        // Keep the same map point under the midpoint while both fingers move.
+        const offsetX = gesture.anchor.x - gesture.view.x + (midpoint.x - gesture.x) / gesture.scale;
+        const offsetY = gesture.anchor.y - gesture.view.y + (midpoint.y - gesture.y) / gesture.scale;
+        zoomTo(nextWidth, gesture.anchor.x - offsetX * ratio, gesture.anchor.y - offsetY * ratio);
+      } else if (touches.length === 1) {
+        const { clientX, clientY } = touches[0];
+        const dx = clientX - gesture.x;
+        const dy = clientY - gesture.y;
+        if (!gesture.moved && Math.hypot(dx, dy) < 5) return;
+        ignorePointerClick = true;
+        gesture.moved = true;
+        gesture.x = clientX;
+        gesture.y = clientY;
+        if (!gesture.canPan || view.width === width) return;
+        if (event.cancelable) event.preventDefault();
+        finishHint();
+        panTo(view.x - dx / scale, view.y - dy / scale);
+      }
+    }, { passive: false });
+
+    function finishTouchGesture(event) {
+      if (event.type === "touchcancel") ignorePointerClick = true;
+      startTouchGesture(mapTouches(event));
+    }
+
+    svg.addEventListener("touchend", finishTouchGesture);
+    svg.addEventListener("touchcancel", finishTouchGesture);
+
     refreshTargets();
+    measureViewport();
     updateView();
-    const resize = new ResizeObserver(updateView);
+    const resize = new ResizeObserver(measureViewport);
     resize.observe(svg);
 
     return {

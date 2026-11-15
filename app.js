@@ -4,7 +4,7 @@
   const byId = (id) => document.getElementById(id);
   const { AsiaQuiz, AsiaMap } = window;
   const ui = Object.fromEntries([
-    "workspace", "map-count", "map-surface", "map-label", "return-to-task",
+    "workspace", "map-count", "map-surface", "map-label", "task-actions",
     "question-number", "mode-chip", "test-progress", "prompt-label", "prompt", "answer-form",
     "text-label", "answer", "text-attempt", "map-attempt", "selection-status", "selection-icon", "selection-text",
     "validation", "feedback", "check-answer", "check-label", "skip-answer", "mode-note-icon",
@@ -15,6 +15,7 @@
   if (!AsiaQuiz || !AsiaMap) {
     ui.prompt.textContent = "Не удалось загрузить тренажёр";
     ui["answer-form"].hidden = true;
+    ui["task-actions"].hidden = true;
     return;
   }
 
@@ -72,6 +73,13 @@
     ui.answer.removeAttribute("aria-invalid");
   }
 
+  function revealOnPhone(element, block = "center") {
+    if (!window.matchMedia("(max-width: 740px)").matches) return;
+    const { top, bottom } = element.getBoundingClientRect();
+    const visibleBottom = Math.min(window.innerHeight, ui["task-actions"].getBoundingClientRect().top);
+    if (top < 8 || bottom > visibleBottom - 8) element.scrollIntoView({ block, behavior: "instant" });
+  }
+
   function renderSelection() {
     const selected = active.mapId !== null;
     const hinted = active.practice?.map.status === "hint";
@@ -80,7 +88,6 @@
     ui["selection-text"].textContent = hinted
       ? "Смотреть подсказку на карте"
       : (selected ? "Страна выбрана" : "Выберите страну на карте");
-    ui["return-to-task"].hidden = !hinted && (!selected || Boolean(active.result));
   }
 
   function renderAttempt(node, attempt, correctText, hintText) {
@@ -180,7 +187,10 @@
     renderAttempt(ui["text-attempt"], practice?.text, "Название верно.", "Правильный ответ в поле.");
     renderAttempt(ui["map-attempt"], practice?.map, "Страна указана верно.", "Нужная страна выделена на карте.");
     renderFeedback(result, practice);
-    if (focus) ui.prompt.focus({ preventScroll: true });
+    if (focus) {
+      ui.prompt.focus({ preventScroll: true });
+      revealOnPhone(ui.prompt.closest(".task-panel"), "start");
+    }
   }
 
   function selectSession() {
@@ -242,6 +252,7 @@
       finishPractice();
       renderQuestion({ updateMap: !mapWasResolved });
       ui["check-answer"].focus({ preventScroll: true });
+      if (!mapWasResolved) revealOnPhone(ui["map-surface"]);
       return;
     }
 
@@ -252,6 +263,7 @@
       ui.validation.textContent = text.status ? "Укажите страну на карте."
         : (map.status ? "Введите новый вариант названия." : "Введите название или сделайте новый выбор на карте.");
       ui.validation.hidden = false;
+      revealOnPhone(ui.validation);
       return;
     }
 
@@ -259,6 +271,13 @@
     const animateHint = mapChanged && map.status === "hint";
     renderQuestion({ updateMap: mapChanged && Boolean(map.status), animateHint });
     if (active.result) ui["check-answer"].focus({ preventScroll: true });
+    if (!animateHint) {
+      if (textChanged && !active.result && (!mapChanged || map.status === "correct")) {
+        revealOnPhone(ui["text-attempt"]);
+      } else if (mapChanged) {
+        revealOnPhone(ui["map-attempt"], "end");
+      }
+    }
   }
 
   function submitAnswer(skip = false) {
@@ -292,14 +311,21 @@
     return metric;
   }
 
-  function resultCell(value, correct) {
+  function reviewCell(label, contents) {
     const cell = makeElement("td");
+    cell.setAttribute("role", "cell");
+    const caption = makeElement("span", "review-label", label);
+    caption.setAttribute("aria-hidden", "true");
+    cell.append(caption, contents);
+    return cell;
+  }
+
+  function resultCell(label, value, correct) {
     const content = makeElement("span", `cell-answer ${correct ? "ok" : "wrong"}`);
     const statusImage = icon(correct ? "check" : "close");
     const status = makeElement("span", "visually-hidden", correct ? "Верно. " : "Ошибка. ");
     content.append(statusImage, status, makeElement("span", null, value || "Пропуск"));
-    cell.append(content);
-    return cell;
+    return reviewCell(label, content);
   }
 
   function renderRows(rows) {
@@ -307,11 +333,12 @@
     ui["empty-results"].hidden = filtered.length > 0;
     ui["result-rows"].replaceChildren(...filtered.map((row) => {
       const tr = makeElement("tr");
+      tr.setAttribute("role", "row");
       tr.append(
-        makeElement("td", null, row.country.name),
-        makeElement("td", null, row.country.capital),
-        resultCell(row.text, row.textCorrect),
-        resultCell(countryById.get(row.mapId)?.name, row.mapCorrect),
+        reviewCell("Страна", row.country.name),
+        reviewCell("Столица", row.country.capital),
+        resultCell("Ваш ответ", row.text, row.textCorrect),
+        resultCell("Выбор на карте", countryById.get(row.mapId)?.name, row.mapCorrect),
       );
       return tr;
     }));
@@ -365,10 +392,6 @@
   ui["selection-status"].addEventListener("click", () => {
     ui["map-surface"].scrollIntoView({ block: "center", behavior: "instant" });
     ui["map-surface"].querySelector('[tabindex="0"]')?.focus({ preventScroll: true });
-  });
-  ui["return-to-task"].addEventListener("click", () => {
-    const readyToCheck = active.practice?.text.status || (active.text.trim() && active.practice?.map.status !== "hint");
-    (readyToCheck ? ui["check-answer"] : ui.answer).focus();
   });
   byId("zoom-in").addEventListener("click", map.zoomIn);
   byId("zoom-out").addEventListener("click", map.zoomOut);
